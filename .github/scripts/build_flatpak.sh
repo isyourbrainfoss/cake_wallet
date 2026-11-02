@@ -6,7 +6,7 @@ cd "$GITHUB_WORKSPACE/linux/flatpak"
 rm -rf bundle && tar xzf "$TARBALL"
 test -x bundle/cake_wallet
 sudo apt-get update
-sudo apt-get install -y --no-install-recommends flatpak flatpak-builder
+sudo apt-get install -y --no-install-recommends flatpak flatpak-builder elfutils
 # Ubuntu 24.04 restricts unprivileged user namespaces, which bwrap needs.
 sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
 flatpak --user remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo

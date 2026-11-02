@@ -17,6 +17,10 @@ finish-args:
 modules:
   - name: cake_wallet
     buildsystem: simple
+    # Prebuilt release bundle: don't strip or split debuginfo (also avoids needing eu-strip).
+    build-options:
+      no-debuginfo: true
+      strip: false
     build-commands:
       - cp -R bundle /app/cake_wallet
       - chmod +x /app/cake_wallet/cake_wallet
