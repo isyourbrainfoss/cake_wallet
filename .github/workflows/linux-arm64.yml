@@ -74,8 +74,8 @@ jobs:
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
-      - name: Free disk space
-        run: .github/scripts/free_disk_arm64.sh
+      - name: Disk space
+        run: df -h
       - name: Cache zcash build
         id: cache
         uses: actions/cache@v4
@@ -97,8 +97,8 @@ jobs:
     timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
-      - name: Free disk space
-        run: .github/scripts/free_disk_arm64.sh
+      - name: Disk space
+        run: df -h
       - name: Toolchain info
         run: .github/scripts/in_image.sh info
       - name: monero_c checkout (for git describe)
