@@ -1,0 +1,110 @@
+name: Cake Wallet Linux arm64 (native)
+
+# Native aarch64 Linux build on GitHub's free arm64 runners (public repos).
+# Uses the arm64 variant of the upstream multi-arch build image.
+on:
+  workflow_dispatch:
+  push:
+    branches: [linux-arm64]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-arm64-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CW_IMAGE: ghcr.io/cake-tech/cake_wallet:debian13-flutter3.41.9-ndkr28-go1.24.1-ruststablenightly
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  monero:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        coin: [monero, wownero]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free disk space
+        run: .github/scripts/free_disk_arm64.sh
+      - name: Cache monero_c build
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: scripts/monero_c/release
+          key: monero_c-${{ matrix.coin }}-aarch64-linux-gnu-${{ hashFiles('scripts/prepare_moneroc.sh', 'scripts/linux/build_monero_all.sh') }}
+      - name: Build ${{ matrix.coin }}
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: .github/scripts/in_image.sh monero ${{ matrix.coin }}
+      - name: Disk usage
+        if: always()
+        run: df -h
+      - uses: actions/upload-artifact@v4
+        with:
+          name: monero_c-${{ matrix.coin }}-aarch64
+          path: scripts/monero_c/release
+          if-no-files-found: error
+
+  zcash:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free disk space
+        run: .github/scripts/free_disk_arm64.sh
+      - name: Cache zcash build
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: scripts/zcash_lib/target/release/libwarp_api_ffi.so
+          key: zcash-aarch64-linux-gnu-${{ hashFiles('scripts/prepare_zcash.sh', 'scripts/linux/build_zcash.sh') }}
+      - name: Build zcash lib
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: .github/scripts/in_image.sh zcash
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zcash-aarch64
+          path: scripts/zcash_lib/target/release/libwarp_api_ffi.so
+          if-no-files-found: error
+
+  app:
+    needs: [monero, zcash]
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free disk space
+        run: .github/scripts/free_disk_arm64.sh
+      - name: Toolchain info
+        run: .github/scripts/in_image.sh info
+      - name: monero_c checkout (for git describe)
+        run: .github/scripts/in_image.sh monero_c_checkout
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: monero_c-*-aarch64
+          path: scripts/monero_c/release
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: zcash-aarch64
+          path: scripts/zcash_lib/target/release
+      - name: Dart-only deps (bitbox clone, torch_dart source, mweb ffigen)
+        run: .github/scripts/in_image.sh dart_deps
+      - name: reown (Dart codegen only, no Android native)
+        run: .github/scripts/in_image.sh reown
+      - name: Configure and build app
+        run: .github/scripts/in_image.sh app
+      - name: Disk usage
+        if: always()
+        run: df -h
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cakewallet_linux_arm64_bundle
+          path: build/linux/arm64/release/bundle
+          if-no-files-found: error
