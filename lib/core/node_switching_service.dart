@@ -3,6 +3,7 @@ import 'package:cw_core/node.dart';
 import 'package:cw_core/wallet_type.dart';
 import 'package:cake_wallet/store/app_store.dart';
 import 'package:cake_wallet/store/settings_store.dart';
+import 'package:cake_wallet/utils/connectivity_util.dart';
 import 'package:cake_wallet/utils/feature_flag.dart';
 import 'package:cw_core/utils/print_verbose.dart';
 import 'package:hive/hive.dart';
@@ -87,7 +88,7 @@ class NodeSwitchingService {
     }
 
     try {
-      final connectivityResult = await Connectivity().checkConnectivity();
+      final connectivityResult = await checkConnectivitySafe();
       if (connectivityResult == ConnectivityResult.none) {
         printV('No network connectivity detected. Skipping node health check.');
         return;
