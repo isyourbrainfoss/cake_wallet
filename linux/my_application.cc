@@ -14,6 +14,31 @@ struct _MyApplication {
 
 G_DEFINE_TYPE(MyApplication, my_application, GTK_TYPE_APPLICATION)
 
+// Phone-sized (e.g. Linux phones) or portrait screens get a window that
+// fills the monitor work area; desktops keep the 480x800 default.
+static void set_initial_window_size(GtkWindow* window) {
+  GdkDisplay* display = gtk_widget_get_display(GTK_WIDGET(window));
+  GdkMonitor* monitor = gdk_display_get_primary_monitor(display);
+  if (monitor == nullptr && gdk_display_get_n_monitors(display) > 0) {
+    monitor = gdk_display_get_monitor(display, 0);
+  }
+
+  if (monitor != nullptr) {
+    GdkRectangle workarea;
+    gdk_monitor_get_workarea(monitor, &workarea);
+    if (workarea.width > 0 && workarea.height > 0 &&
+        (workarea.width <= 800 || workarea.height > workarea.width)) {
+      gtk_window_set_default_size(window, workarea.width, workarea.height);
+      // Without a window manager maximize is a no-op, so position it too.
+      gtk_window_move(window, workarea.x, workarea.y);
+      gtk_window_maximize(window);
+      return;
+    }
+  }
+
+  gtk_window_set_default_size(window, 480, 800);
+}
+
 // Implements GApplication::activate.
 static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
@@ -46,7 +71,7 @@ static void my_application_activate(GApplication* application) {
   } else {
     gtk_window_set_title(window, "Cake Wallet");
   }
-  gtk_window_set_default_size(window, 480, 800);
+  set_initial_window_size(window);
   gtk_widget_show(GTK_WIDGET(window));
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
