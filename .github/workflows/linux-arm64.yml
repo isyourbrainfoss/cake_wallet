@@ -23,7 +23,11 @@ defaults:
 
 jobs:
   monero:
-    runs-on: ubuntu-24.04-arm
+    # Runs on the host of ubuntu-26.04-arm rather than in the Debian 13 build image:
+    # monero_c's simplybs downloads a prebuilt native clang21-aarch64-linux-gnu toolchain
+    # (MrCyjaneK/easybs r0) that needs GLIBC_2.42 at build time; Debian 13 has 2.41.
+    # Target libraries are linked against simplybs' own crosstool-ng sysroot.
+    runs-on: ubuntu-26.04-arm
     timeout-minutes: 360
     strategy:
       fail-fast: false
@@ -31,8 +35,16 @@ jobs:
         coin: [monero, wownero]
     steps:
       - uses: actions/checkout@v4
-      - name: Free disk space
-        run: .github/scripts/free_disk_arm64.sh
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache: false
+      - name: Host build deps
+        run: |
+          ldd --version | head -1
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential autoconf automake libtool \
+            pkg-config gperf cmake python3 git curl xz-utils unzip bzip2 file
       - name: Cache monero_c build
         id: cache
         uses: actions/cache@v4
@@ -41,7 +53,13 @@ jobs:
           key: monero_c-${{ matrix.coin }}-aarch64-linux-gnu-${{ hashFiles('scripts/prepare_moneroc.sh', 'scripts/linux/build_monero_all.sh') }}
       - name: Build ${{ matrix.coin }}
         if: steps.cache.outputs.cache-hit != 'true'
-        run: .github/scripts/in_image.sh monero ${{ matrix.coin }}
+        run: bash scripts/linux/arm64/ci_step.sh monero ${{ matrix.coin }}
+      - name: Inspect libraries
+        run: |
+          for f in scripts/monero_c/release/*/aarch64-linux-gnu/*; do
+            file "$f"
+            case "$f" in *.so) objdump -T "$f" | grep -o 'GLIBC_[0-9.]*' | sort -Vu | tail -1;; esac
+          done
       - name: Disk usage
         if: always()
         run: df -h
