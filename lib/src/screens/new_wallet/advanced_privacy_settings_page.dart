@@ -19,6 +19,8 @@ import 'package:cake_wallet/view_model/advanced_privacy_settings_view_model.dart
 import 'package:cake_wallet/view_model/node_list/node_create_or_edit_view_model.dart';
 import 'package:cake_wallet/view_model/seed_settings_view_model.dart';
 import 'package:cake_wallet/view_model/settings/choices_list_item.dart';
+import 'package:collection/collection.dart';
+import 'package:cw_core/node.dart';
 import 'package:cw_core/wallet_type.dart';
 import 'package:cake_wallet/zcash/zcash_network_type.dart';
 import 'package:flutter/material.dart';
@@ -353,13 +355,11 @@ class _AdvancedPrivacySettingsBodyState extends State<_AdvancedPrivacySettingsBo
                   widget.nodeViewModel.setAsCurrent(widget.nodeViewModel.editingNode!);
                 }
                 if (testnetValue == true &&
-                    widget.privacySettingsViewModel.type == WalletType.bitcoin) {
+                    widget.privacySettingsViewModel.type == WalletType.bitcoin &&
+                    !widget.privacySettingsViewModel.addCustomNode) {
                   // TODO: add type (mainnet/testnet) to Node class so when switching wallets the node can be switched to a matching type
                   // Currently this is so you can create a working testnet wallet but you need to keep switching back the node if you use multiple wallets at once
-                  widget.nodeViewModel.address = publicBitcoinTestnetElectrumAddress;
-                  widget.nodeViewModel.port = publicBitcoinTestnetElectrumPort;
-
-                  await widget.nodeViewModel.save();
+                  await _selectBitcoinTestnetNode();
                 }
                 if (_passphraseFormKey.currentState != null &&
                     !_passphraseFormKey.currentState!.validate()) {
@@ -379,6 +379,28 @@ class _AdvancedPrivacySettingsBodyState extends State<_AdvancedPrivacySettingsBo
         ),
       ),
     );
+  }
+
+  /// Selects the public testnet Electrum server as the current Bitcoin node,
+  /// reusing an existing entry (and fixing its SSL flag) instead of adding a
+  /// duplicate on every testnet wallet creation.
+  Future<void> _selectBitcoinTestnetNode() async {
+    final existing = (await Node.getAllForWalletType(WalletType.bitcoin))
+        .firstWhereOrNull((node) => node.uriRaw == publicBitcoinTestnetElectrumUri);
+
+    if (existing != null) {
+      if (existing.useSSL != true) {
+        existing.useSSL = true;
+        await existing.save();
+      }
+      widget.nodeViewModel.setAsCurrent(existing);
+      return;
+    }
+
+    widget.nodeViewModel.address = publicBitcoinTestnetElectrumAddress;
+    widget.nodeViewModel.port = publicBitcoinTestnetElectrumPort;
+    widget.nodeViewModel.useSSL = true;
+    await widget.nodeViewModel.save(saveAsCurrent: true);
   }
 
   void showAlertForSelectingNonBIP39DerivationTypeForChildWallets() {
