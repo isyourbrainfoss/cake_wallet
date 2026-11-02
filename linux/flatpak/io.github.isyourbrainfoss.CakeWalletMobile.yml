@@ -1,0 +1,38 @@
+# Community (unofficial) Flatpak of Cake Wallet for Linux, aimed at aarch64 Linux phones
+# (postmarketOS/Nura, Phosh, Plasma Mobile). Packages a prebuilt Flutter bundle.
+# Cake Wallet is MIT licensed, (c) Cake Labs LLC; see LICENSE.md (shipped in /app/share/licenses).
+# Expects ./bundle (output of `flutter build linux --release`) next to this manifest.
+app-id: io.github.isyourbrainfoss.CakeWalletMobile
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+command: cake-wallet-mobile
+separate-locales: false
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+modules:
+  - name: cake_wallet
+    buildsystem: simple
+    build-commands:
+      - cp -R bundle /app/cake_wallet
+      - chmod +x /app/cake_wallet/cake_wallet
+      - install -Dm755 cake-wallet-mobile.sh /app/bin/cake-wallet-mobile
+      - install -Dm644 cakewallet_icon_180.png /app/share/icons/hicolor/180x180/apps/io.github.isyourbrainfoss.CakeWalletMobile.png
+      - install -Dm644 io.github.isyourbrainfoss.CakeWalletMobile.desktop /app/share/applications/io.github.isyourbrainfoss.CakeWalletMobile.desktop
+      - install -Dm644 LICENSE.md /app/share/licenses/io.github.isyourbrainfoss.CakeWalletMobile/LICENSE.md
+    sources:
+      - type: dir
+        path: bundle
+        dest: bundle
+      - type: file
+        path: cake-wallet-mobile.sh
+      - type: file
+        path: io.github.isyourbrainfoss.CakeWalletMobile.desktop
+      - type: file
+        path: ../../assets/images/cakewallet_icon_180.png
+      - type: file
+        path: ../../LICENSE.md

@@ -103,8 +103,28 @@ jobs:
       - name: Disk usage
         if: always()
         run: df -h
+      - name: Pack bundle (tarball keeps file modes)
+        run: sudo tar czf cakewallet_linux_arm64_bundle.tar.gz -C build/linux/arm64/release bundle
       - uses: actions/upload-artifact@v4
         with:
           name: cakewallet_linux_arm64_bundle
-          path: build/linux/arm64/release/bundle
+          path: cakewallet_linux_arm64_bundle.tar.gz
+          if-no-files-found: error
+
+  flatpak:
+    needs: app
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: cakewallet_linux_arm64_bundle
+          path: ${{ runner.temp }}
+      - name: Build Flatpak
+        run: .github/scripts/build_flatpak.sh "${{ runner.temp }}/cakewallet_linux_arm64_bundle.tar.gz"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cakewallet_mobile_aarch64_flatpak
+          path: cakewallet-mobile-aarch64.flatpak
           if-no-files-found: error
