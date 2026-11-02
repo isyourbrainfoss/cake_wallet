@@ -51,9 +51,28 @@ jobs:
         with:
           path: scripts/monero_c/release
           key: monero_c-${{ matrix.coin }}-aarch64-linux-gnu-${{ hashFiles('scripts/prepare_moneroc.sh', 'scripts/linux/build_monero_all.sh') }}
+      # simplybs keeps every built native tool / target dep under .buildlib/<builder>/built and skips
+      # packages whose .info.txt still matches. Restore it, and save it even when the build fails or
+      # times out, so the multi-hour toolchain bootstrap is only paid once.
+      - name: Restore simplybs build cache
+        if: steps.cache.outputs.cache-hit != 'true'
+        id: sbs
+        uses: actions/cache/restore@v4
+        with:
+          path: scripts/monero_c/contrib/depends/simplybs/.buildlib/linux_arm64/built
+          key: sbs-built-linux_arm64-aarch64-linux-gnu-${{ hashFiles('scripts/prepare_moneroc.sh') }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.coin }}
+          restore-keys: |
+            sbs-built-linux_arm64-aarch64-linux-gnu-${{ hashFiles('scripts/prepare_moneroc.sh') }}-
       - name: Build ${{ matrix.coin }}
         if: steps.cache.outputs.cache-hit != 'true'
+        timeout-minutes: 330
         run: bash scripts/linux/arm64/ci_step.sh monero ${{ matrix.coin }}
+      - name: Save simplybs build cache
+        if: always() && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: scripts/monero_c/contrib/depends/simplybs/.buildlib/linux_arm64/built
+          key: sbs-built-linux_arm64-aarch64-linux-gnu-${{ hashFiles('scripts/prepare_moneroc.sh') }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.coin }}
       - name: Inspect libraries
         run: |
           for f in scripts/monero_c/release/*/aarch64-linux-gnu/*; do
