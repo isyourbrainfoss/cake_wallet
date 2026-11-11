@@ -42,7 +42,8 @@ class DisplaySettingsPage extends StatelessWidget {
         spacing: 16,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (responsiveLayoutUtil.shouldRenderMobileUI && DeviceInfo.instance.isMobile) ...[
+          if (responsiveLayoutUtil.shouldRenderMobileUI &&
+              (DeviceInfo.instance.isMobile || DeviceInfo.instance.isLinuxMobile)) ...[
             Padding(
               padding: const EdgeInsets.only(left: 14, top: 14),
               child: Text(

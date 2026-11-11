@@ -149,7 +149,8 @@ abstract class ThemeStoreBase with Store {
     final bool isNewInstall = sharedPreferences.getBool(PreferencesKey.isNewInstall) ?? true;
 
     bool shouldUseMobileTheme =
-        responsiveLayoutUtil.shouldRenderMobileUI && DeviceInfo.instance.isMobile;
+        responsiveLayoutUtil.shouldRenderMobileUI &&
+        (DeviceInfo.instance.isMobile || DeviceInfo.instance.isLinuxMobile);
 
     if (shouldUseMobileTheme) {
       await _handleMobileTheme(isNewInstall);
