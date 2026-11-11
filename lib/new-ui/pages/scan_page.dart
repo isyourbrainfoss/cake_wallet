@@ -8,6 +8,7 @@ import 'package:cake_wallet/new-ui/widgets/receive_page/receive_top_bar.dart';
 import 'package:cake_wallet/new-ui/widgets/scan_page/network_list.dart';
 import 'package:cake_wallet/new-ui/widgets/send_page/floating_icon_button.dart';
 import 'package:cake_wallet/src/widgets/alert_with_one_action.dart';
+import 'package:cake_wallet/utils/device_info.dart';
 import 'package:cake_wallet/utils/show_pop_up.dart';
 import 'package:cw_core/utils/print_verbose.dart';
 import 'package:fast_scanner/fast_scanner.dart';
@@ -27,10 +28,14 @@ class ScanPage extends StatefulWidget {
 }
 
 class _ScanPageState extends State<ScanPage> {
-  final MobileScannerController controller = MobileScannerController();
+  // fast_scanner has no Linux/Windows backend. There we skip the camera entirely and
+  // open straight into manual input (paste / type), instead of a broken camera view.
+  final bool _hasCamera = DeviceInfo.instance.hasCameraQrScanner;
+  late final MobileScannerController? controller =
+      _hasCamera ? MobileScannerController() : null;
   int? _numCameras;
   bool _frontFlashMode = false;
-  bool _textInputMode = false;
+  late bool _textInputMode = !_hasCamera;
   final TextEditingController textController = TextEditingController();
   final FocusNode textFocusNode = FocusNode();
   List<String> urCodes = [];
@@ -42,18 +47,23 @@ class _ScanPageState extends State<ScanPage> {
   @override
   void initState() {
     super.initState();
-    controller.addListener(() {
+    controller?.addListener(() {
       if (mounted) {
         setState(() {
-          _numCameras = controller.value.availableCameras;
+          _numCameras = controller?.value.availableCameras;
         });
       }
     });
+    if (!_hasCamera && widget.showManualInput) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) textFocusNode.requestFocus();
+      });
+    }
   }
 
   @override
   void dispose() {
-    controller.dispose();
+    controller?.dispose();
     textController.dispose();
     textFocusNode.dispose();
     super.dispose();
@@ -72,17 +82,20 @@ class _ScanPageState extends State<ScanPage> {
     return Material(
       child: Stack(
         children: [
-          MobileScanner(
-            controller: controller,
-            onDetect: _handleBarcode,
-          ),
+          if (controller != null)
+            MobileScanner(
+              controller: controller!,
+              onDetect: _handleBarcode,
+            )
+          else
+            Positioned.fill(child: ColoredBox(color: Colors.black)),
           // A full screen tap target would otherwise show up as one giant unlabeled
           // node; leaving text mode is also possible with the back button.
           Positioned.fill(
             child: ExcludeSemantics(
               child: GestureDetector(
                 onTap: () => setState(() {
-                  _textInputMode = false;
+                  _textInputMode = !_hasCamera;
                 }),
                 child: RepaintBoundary(
                   child: AnimatedSwitcher(
@@ -154,13 +167,13 @@ class _ScanPageState extends State<ScanPage> {
                     child: Row(
                       spacing: 8,
                       children: [
-                        if ((_numCameras ?? 0) > 1)
+                        if (controller != null && (_numCameras ?? 0) > 1)
                           ModernButton.svg(
                             size: 36,
                             iconSize: 24,
                             svgPath: "assets/new-ui/camera_flip.svg",
                             onPressed: () {
-                              controller.switchCamera();
+                              controller!.switchCamera();
                               setState(() {
                                 _frontFlashMode = false;
                               });
@@ -169,29 +182,30 @@ class _ScanPageState extends State<ScanPage> {
                             backgroundColor: buttonColor,
                             semanticLabel: S.of(context).switch_camera,
                           ),
-                        ModernButton(
-                          size: 36,
-                          iconSize: 24,
-                          icon: Icon(
-                              (controller.value.torchState == TorchState.on || _frontFlashMode)
-                                  ? Icons.flash_off_outlined
-                                  : Icons.flash_on),
-                          semanticLabel:
-                              (controller.value.torchState == TorchState.on || _frontFlashMode)
-                                  ? S.of(context).turn_flash_off
-                                  : S.of(context).turn_flash_on,
-                          onPressed: () {
-                            if (controller.value.cameraDirection == CameraFacing.front) {
-                              setState(() {
-                                _frontFlashMode = !_frontFlashMode;
-                              });
-                            } else {
-                              controller.toggleTorch();
-                            }
-                          },
-                          iconColor: buttonIconColor,
-                          backgroundColor: buttonColor,
-                        ),
+                        if (controller != null)
+                          ModernButton(
+                            size: 36,
+                            iconSize: 24,
+                            icon: Icon(
+                                (controller!.value.torchState == TorchState.on || _frontFlashMode)
+                                    ? Icons.flash_off_outlined
+                                    : Icons.flash_on),
+                            semanticLabel:
+                                (controller!.value.torchState == TorchState.on || _frontFlashMode)
+                                    ? S.of(context).turn_flash_off
+                                    : S.of(context).turn_flash_on,
+                            onPressed: () {
+                              if (controller!.value.cameraDirection == CameraFacing.front) {
+                                setState(() {
+                                  _frontFlashMode = !_frontFlashMode;
+                                });
+                              } else {
+                                controller!.toggleTorch();
+                              }
+                            },
+                            iconColor: buttonIconColor,
+                            backgroundColor: buttonColor,
+                          ),
                       ],
                     ),
                   ),
@@ -205,7 +219,7 @@ class _ScanPageState extends State<ScanPage> {
                         icon: Icon(Icons.arrow_back_ios_new),
                         semanticLabel: S.of(context).seed_alert_back,
                         onPressed: () {
-                          if (_textInputMode) {
+                          if (_textInputMode && _hasCamera) {
                             setState(() {
                               _textInputMode = false;
                             });
@@ -257,7 +271,7 @@ class _ScanPageState extends State<ScanPage> {
                                   Navigator.of(context).pop(val);
                                 } else {
                                   setState(() {
-                                    _textInputMode = false;
+                                    _textInputMode = !_hasCamera;
                                   });
                                 }
                               },
@@ -334,7 +348,7 @@ class _ScanPageState extends State<ScanPage> {
                             onTap: () async {
                               if (_textInputMode) return;
                               try {
-                                controller.stop();
+                                controller?.stop();
                                 await showModalBottomSheet(
                                     context: context,
                                     isScrollControlled: true,
@@ -342,7 +356,7 @@ class _ScanPageState extends State<ScanPage> {
                                     backgroundColor: Theme.of(context).colorScheme.surface,
                                     builder: (context) => ScanPageNetworkList());
                               } finally {
-                                controller.start();
+                                controller?.start();
                               }
                             },
                             icon: Icons.question_mark,
