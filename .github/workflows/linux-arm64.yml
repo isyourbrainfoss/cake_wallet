@@ -42,8 +42,21 @@ jobs:
       - name: Host build deps
         run: |
           ldd --version | head -1
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends build-essential autoconf automake libtool \
+          apt_retry() {
+            local n=0 max=5 delay=15
+            until "$@"; do
+              n=$((n + 1))
+              if [ "$n" -ge "$max" ]; then
+                return 1
+              fi
+              echo "apt failed (attempt $n/$max), retrying in ${delay}s..."
+              sleep "$delay"
+              delay=$((delay * 2))
+            done
+          }
+          apt_retry sudo apt-get update -o Acquire::Retries=5
+          apt_retry sudo apt-get install -y --no-install-recommends -o Acquire::Retries=5 \
+            build-essential autoconf automake libtool \
             pkg-config gperf cmake python3 git curl xz-utils unzip bzip2 file
       - name: Cache monero_c build
         id: cache
