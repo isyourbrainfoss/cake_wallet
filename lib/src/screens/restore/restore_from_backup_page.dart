@@ -11,7 +11,6 @@ import 'package:flutter/material.dart';
 import 'package:cake_wallet/src/widgets/primary_button.dart';
 import 'package:cake_wallet/view_model/restore_from_backup_view_model.dart';
 import 'package:cake_wallet/src/screens/base_page.dart';
-import 'package:file_picker/file_picker.dart';
 import "package:flutter/services.dart";
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:mobx/mobx.dart';

@@ -11,7 +11,6 @@ import 'package:cw_core/wallet_type.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import "package:file_picker/file_picker.dart";
 import 'package:flutter_mobx/flutter_mobx.dart';
 import 'package:cake_wallet/generated/i18n.dart';
 import 'package:cake_wallet/src/widgets/primary_button.dart';
