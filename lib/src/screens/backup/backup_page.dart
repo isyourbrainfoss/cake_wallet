@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:ui';
+import 'package:cake_wallet/utils/file_dialogs.dart';
 import 'package:cake_wallet/core/execution_state.dart';
 import 'package:cake_wallet/src/screens/base_page.dart';
 import 'package:cake_wallet/src/widgets/alert_with_two_actions.dart';
@@ -13,7 +14,6 @@ import 'package:cake_wallet/utils/share_util.dart';
 import 'package:cake_wallet/utils/show_bar.dart';
 import 'package:cake_wallet/utils/show_pop_up.dart';
 import 'package:cake_wallet/view_model/backup_view_model.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -175,10 +175,8 @@ class BackupPage extends BasePage {
   }
 
   Future<void> _saveFile(BackupExportFile backup) async {
-    String? outputFile = await FilePicker.platform.saveFile(
-        dialogTitle: 'Save Your File to desired location',
-        fileName: backup.name,
-        lockParentWindow: true);
+    String? outputFile = await FileDialogs.saveFilePath(
+        dialogTitle: 'Save Your File to desired location', fileName: backup.name);
 
     if (outputFile == null) return;
 

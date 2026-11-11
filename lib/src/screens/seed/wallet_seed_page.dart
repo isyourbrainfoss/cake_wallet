@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:cake_wallet/utils/file_dialogs.dart';
 import 'package:cake_wallet/routes.dart';
 import 'package:cake_wallet/src/widgets/seedphrase_grid_widget.dart';
 import 'package:cake_wallet/src/widgets/warning_box_widget.dart';
@@ -159,10 +160,9 @@ class WalletSeedPage extends BasePage {
       case TargetPlatform.macOS:
       case TargetPlatform.windows:
       case TargetPlatform.linux:
-        final path = await FilePicker.platform.saveFile(
+        final path = await FileDialogs.saveFilePath(
           dialogTitle: "Save seed as",
           fileName: "${walletSeedViewModel.name}-seed.txt",
-          lockParentWindow: true,
         );
         if (path != null) {
           final file = File(path);

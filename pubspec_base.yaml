@@ -18,6 +18,8 @@ dependencies:
       url: https://github.com/MrCyjaneK/fast_scanner
       ref: 69b3276b090fa6ac01b4483ca3adca93a8e615be
   http: ^1.1.0
+  # xdg-desktop-portal FileChooser on Linux (Flatpak / Linux phones); pinned in pubspec_overrides.yaml
+  dbus: any
   path_provider: ^2.0.11
   modal_bottom_sheet:
     git:

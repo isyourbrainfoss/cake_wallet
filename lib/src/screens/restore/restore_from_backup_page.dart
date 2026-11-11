@@ -1,3 +1,4 @@
+import 'package:cake_wallet/utils/file_dialogs.dart';
 import 'package:cake_wallet/core/backup_service_v3.dart';
 import 'package:cake_wallet/core/execution_state.dart';
 import 'package:cake_wallet/generated/i18n.dart';
@@ -158,13 +159,13 @@ class RestoreFromBackupPage extends BasePage {
   }
 
   Future<void> presentFilePicker() async {
-    final result = await FilePicker.platform.pickFiles();
+    final path = await FileDialogs.pickFilePath(dialogTitle: S.current.select_backup_file);
 
-    if (result?.files.isEmpty ?? true) {
+    if (path == null || path.isEmpty) {
       return;
     }
 
-    restoreFromBackupViewModel.filePath = result!.files.first.path!;
+    restoreFromBackupViewModel.filePath = path;
   }
 
   Future<void> onImportHandler(BuildContext context) async {

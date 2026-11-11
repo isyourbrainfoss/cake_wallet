@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:cake_wallet/utils/file_dialogs.dart';
 import 'package:cake_wallet/src/screens/base_page.dart';
 import 'package:cake_wallet/src/widgets/alert_with_two_actions.dart';
 import 'package:cake_wallet/src/widgets/primary_button.dart';
@@ -8,7 +9,6 @@ import 'package:cake_wallet/utils/share_util.dart';
 import 'package:cake_wallet/utils/show_pop_up.dart';
 import 'package:cake_wallet/view_model/settings/mweb_settings_view_model.dart';
 import 'package:cw_core/root_dir.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -104,10 +104,8 @@ class MwebLogsPage extends BasePage {
   }
 
   Future<void> _saveFile() async {
-    String? outputFile = await FilePicker.platform.saveFile(
-        dialogTitle: 'Save Your File to desired location',
-        fileName: "debug.log",
-        lockParentWindow: true);
+    String? outputFile = await FileDialogs.saveFilePath(
+        dialogTitle: 'Save Your File to desired location', fileName: "debug.log");
 
     if (outputFile == null) return;
 

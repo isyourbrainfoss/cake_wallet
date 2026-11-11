@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:cake_wallet/utils/file_dialogs.dart';
 import 'package:cake_wallet/entities/transaction_description.dart';
 import 'package:cake_wallet/generated/i18n.dart';
 import 'package:cake_wallet/src/screens/backup/backup_page.dart';
@@ -16,7 +17,6 @@ import 'package:cake_wallet/view_model/dashboard/trade_list_item.dart';
 import 'package:cake_wallet/view_model/dashboard/transaction_list_item.dart';
 import 'package:collection/collection.dart';
 import 'package:cw_core/transaction_direction.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
@@ -311,10 +311,9 @@ class CsvExportService {
   }
 
   Future<void> _saveFileDesktop(File csvFile, String fileName) async {
-    final outputPath = await FilePicker.platform.saveFile(
+    final outputPath = await FileDialogs.saveFilePath(
       dialogTitle: 'Save CSV export',
       fileName: fileName,
-      lockParentWindow: true,
     );
     if (outputPath == null) return;
     await csvFile.copy(outputPath);
