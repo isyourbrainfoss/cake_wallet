@@ -26,6 +26,8 @@ modules:
       - chmod +x /app/cake_wallet/cake_wallet
       - install -Dm755 cake-wallet-mobile.sh /app/bin/cake-wallet-mobile
       - install -Dm644 cakewallet_icon_180.png /app/share/icons/hicolor/180x180/apps/io.github.isyourbrainfoss.CakeWalletMobile.png
+      - install -Dm644 cakewallet_icon_512.png /app/share/icons/hicolor/512x512/apps/io.github.isyourbrainfoss.CakeWalletMobile.png
+      - install -Dm644 io.github.isyourbrainfoss.CakeWalletMobile.metainfo.xml /app/share/metainfo/io.github.isyourbrainfoss.CakeWalletMobile.metainfo.xml
       - install -Dm644 io.github.isyourbrainfoss.CakeWalletMobile.desktop /app/share/applications/io.github.isyourbrainfoss.CakeWalletMobile.desktop
       - install -Dm644 LICENSE.md /app/share/licenses/io.github.isyourbrainfoss.CakeWalletMobile/LICENSE.md
     sources:
@@ -37,6 +39,10 @@ modules:
       - type: file
         path: io.github.isyourbrainfoss.CakeWalletMobile.desktop
       - type: file
+        path: io.github.isyourbrainfoss.CakeWalletMobile.metainfo.xml
+      - type: file
         path: ../../assets/images/cakewallet_icon_180.png
+      - type: file
+        path: cakewallet_icon_512.png
       - type: file
         path: ../../LICENSE.md

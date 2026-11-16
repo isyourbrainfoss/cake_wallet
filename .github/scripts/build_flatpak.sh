@@ -12,7 +12,7 @@ sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 || true
 flatpak --user remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 flatpak --user install -y --noninteractive flathub org.freedesktop.Platform//25.08 org.freedesktop.Sdk//25.08
 APP_ID=io.github.isyourbrainfoss.CakeWalletMobile
-flatpak-builder --user --force-clean --repo=repo build-dir "$APP_ID.yml"
+flatpak-builder --user --force-clean --default-branch=stable --repo=repo build-dir "$APP_ID.yml"
 flatpak build-bundle --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo \
-  repo "$GITHUB_WORKSPACE/cakewallet-mobile-aarch64.flatpak" "$APP_ID"
-ls -la "$GITHUB_WORKSPACE/cakewallet-mobile-aarch64.flatpak"
+  repo "$GITHUB_WORKSPACE/$APP_ID-aarch64.flatpak" "$APP_ID" stable
+ls -la "$GITHUB_WORKSPACE/$APP_ID-aarch64.flatpak"

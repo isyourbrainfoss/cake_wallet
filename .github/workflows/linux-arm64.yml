@@ -4,8 +4,15 @@ name: Cake Wallet Linux arm64 (native)
 # Uses the arm64 variant of the upstream multi-arch build image.
 on:
   workflow_dispatch:
+    inputs:
+      release:
+        description: Publish the Flatpak bundle as a GitHub Release and notify isyourbrainfoss/flatpak
+        type: boolean
+        default: false
   push:
-    branches: [linux-arm64]
+    # flatpak/** lets branch PRs exercise the full build; only linux-arm64 and mobile-v* tags release.
+    branches: [linux-arm64, 'flatpak/**']
+    tags: ['mobile-v*']
 
 permissions:
   contents: read
@@ -42,22 +49,39 @@ jobs:
       - name: Host build deps
         run: |
           ldd --version | head -1
-          apt_retry() {
-            local n=0 max=5 delay=15
-            until "$@"; do
-              n=$((n + 1))
-              if [ "$n" -ge "$max" ]; then
-                return 1
-              fi
-              echo "apt failed (attempt $n/$max), retrying in ${delay}s..."
-              sleep "$delay"
-              delay=$((delay * 2))
-            done
+          # Most of these are preinstalled on the runner image; only fetch what is missing so a
+          # flaky mirror (11 Nov: DNS failures for azure.archive.ubuntu.com on ubuntu-26.04-arm)
+          # cannot fail the job when nothing needs downloading.
+          pkgs="build-essential autoconf automake libtool pkg-config gperf cmake python3 git curl xz-utils unzip bzip2 file"
+          need=()
+          for p in $pkgs; do
+            dpkg-query -W -f='${Status}' "$p" 2>/dev/null | grep -q 'install ok installed' || need+=("$p")
+          done
+          if [ ${#need[@]} -eq 0 ]; then
+            echo "All host build deps already installed"
+            exit 0
+          fi
+          echo "Missing: ${need[*]}"
+          apt_install() {
+            sudo apt-get update -o Acquire::Retries=5 &&
+              sudo apt-get install -y --no-install-recommends -o Acquire::Retries=5 "${need[@]}"
           }
-          apt_retry sudo apt-get update -o Acquire::Retries=5
-          apt_retry sudo apt-get install -y --no-install-recommends -o Acquire::Retries=5 \
-            build-essential autoconf automake libtool \
-            pkg-config gperf cmake python3 git curl xz-utils unzip bzip2 file
+          for attempt in 1 2 3; do
+            apt_install && exit 0
+            echo "apt failed (attempt $attempt/3), retrying in $((attempt * 20))s..."
+            sleep $((attempt * 20))
+          done
+          # Fallback: bypass the runner's mirror list and talk to ports.ubuntu.com (arm64 archive).
+          echo "Switching apt sources to ports.ubuntu.com"
+          for f in /etc/apt/sources.list.d/*.sources /etc/apt/sources.list; do
+            [ -f "$f" ] || continue
+            sudo sed -i -E 's#^(URIs:).*#\1 http://ports.ubuntu.com/ubuntu-ports/#; s#(deb(-src)? )(\[[^]]*\] )?[a-z+]+:[^ ]+#\1\3http://ports.ubuntu.com/ubuntu-ports/#' "$f"
+          done
+          for attempt in 1 2 3; do
+            apt_install && exit 0
+            sleep $((attempt * 30))
+          done
+          exit 1
       - name: Cache monero_c build
         id: cache
         uses: actions/cache@v4
@@ -176,5 +200,50 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: cakewallet_mobile_aarch64_flatpak
-          path: cakewallet-mobile-aarch64.flatpak
+          path: io.github.isyourbrainfoss.CakeWalletMobile-aarch64.flatpak
           if-no-files-found: error
+
+  # Publishes the bundle for the shared, signed Flatpak repo (https://isyourbrainfoss.github.io/flatpak/).
+  # isyourbrainfoss/flatpak imports the release asset and signs it there; no signing key lives here.
+  release:
+    needs: flatpak
+    if: >-
+      (github.event_name == 'push' && (github.ref == 'refs/heads/linux-arm64' || startsWith(github.ref, 'refs/tags/mobile-v'))) ||
+      (github.event_name == 'workflow_dispatch' && inputs.release)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: cakewallet_mobile_aarch64_flatpak
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          asset=io.github.isyourbrainfoss.CakeWalletMobile-aarch64.flatpak
+          sha256sum "$asset" > "$asset.sha256"
+          if [[ "$GITHUB_REF" == refs/tags/mobile-v* ]]; then
+            tag="${GITHUB_REF#refs/tags/}"
+          else
+            tag="mobile-r${GITHUB_RUN_NUMBER}"
+          fi
+          echo "TAG=$tag" >> "$GITHUB_ENV"
+          gh release create "$tag" "$asset" "$asset.sha256" \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --latest=false \
+            --title "Cake Wallet Mobile (Flatpak, aarch64) $tag" \
+            --notes "Community aarch64 Flatpak bundle built from ${GITHUB_SHA}. Install with updates from https://isyourbrainfoss.github.io/flatpak/"
+      - name: Notify isyourbrainfoss/flatpak
+        env:
+          DISPATCH_TOKEN: ${{ secrets.FLATPAK_DISPATCH_TOKEN }}
+        run: |
+          if [ -z "${DISPATCH_TOKEN}" ]; then
+            echo "::notice::FLATPAK_DISPATCH_TOKEN not set; the shared repo picks this release up on its weekly run or a manual run."
+            exit 0
+          fi
+          GH_TOKEN="$DISPATCH_TOKEN" gh api repos/isyourbrainfoss/flatpak/dispatches \
+            -f event_type=app-updated \
+            -F 'client_payload[app]=io.github.isyourbrainfoss.CakeWalletMobile' \
+            -F "client_payload[tag]=${TAG}"
