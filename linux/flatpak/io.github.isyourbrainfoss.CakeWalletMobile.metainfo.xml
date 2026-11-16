@@ -41,4 +41,7 @@
       </description>
     </release>
   </releases>
+  <custom>
+    <value key="Purism::form_factor">mobile</value>
+  </custom>
 </component>
